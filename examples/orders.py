@@ -6,10 +6,13 @@
 # FIXME: Prints the sum of _some_ open positions?..
 
 # Maintainer: Austin.Deric@gmail.com (@AustinDeric on github)
+import time
+
 LAST_ORDERS = 5
+PAGES = 4 # 50 RECORDS per page
 
 #fix pair names
-FIX_X_PAIR_NAMES = ['XETHEUR', 'XLTCEUR']
+FIX_X_PAIR_NAMES = ['XETHEUR', 'XLTCEUR', 'XETCEUR']
 
 # Exclude
 EXCLUDE_PAIR_NAMES = ['ZEUREUR', 'BSVEUR']
@@ -32,7 +35,6 @@ start = k.query_public('Time')
 balance = k.query_private('Balance')
 # trade_balance = k.query_private('TradeBalance')
 open_orders = k.query_private('OpenOrders', req_data)
-closed_orders = k.query_private('ClosedOrders', req_data)
 trades_history = k.query_private('TradesHistory', req_data)
 
 end = k.query_public('Time')
@@ -101,15 +103,22 @@ for _, order in open_orders['result']['open'].items():
         print('Missing order pair: {}'.format(pair_name))
 
 print('\n TRADES:')
-for _, order in closed_orders['result']['closed'].items():
-    order_detail = order['descr']
-    pair_name = order_detail['pair']
-    pair = pair_names_dict.get(pair_name)
+# i = 0
+for page in range(PAGES):
+    request_data = dict(req_data)
+    request_data['ofs'] = 50*page
+    closed_orders = k.query_private('ClosedOrders', request_data)
 
-    if pair:
-        pair['trades'].append(order_detail['order'])
-    else:
-        print('Missing order pair: {}'.format(pair_name))
+    for _, order in closed_orders['result']['closed'].items():
+        order_detail = order['descr']
+        pair_name = get_fix_pair_name(order_detail['pair'])
+        pair = pair_names_dict.get(pair_name)
+        # i += 1
+        if pair:
+            pair['trades'].append(order_detail['order'])
+            # print('{}-closed time: {}'.format(i,time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(order['closetm']))))
+        else:
+            print('Missing order pair: {}'.format(pair_name))
 
 # for _, trade in trades_history['result']['trades'].items():
 #     pair_name = get_fix_pair_name(trade['pair'])
